@@ -7,6 +7,7 @@
   >
     <l-tile-layer :url="url"></l-tile-layer>
     <l-marker
+      @click="information(marker), (moreInfo = true)"
       v-for="(marker, key) in markers"
       :key="key"
       :lat-lng="marker"
@@ -28,16 +29,16 @@
             >
           </p></span
         >
-        <button @click="information, (moreInfo = !moreInfo)">Info</button>
-        <button @click="removeMarkByIndex(id)">Delete</button>
+        <button @click="information(marker), (moreInfo = !moreInfo)">
+          Info
+        </button>
+        <button @click="removeMarkByIndex(marker), (moreInfo = true)">
+          Delete
+        </button>
       </l-popup></l-marker
     >
 
-    <l-control
-      :style="{ columnNoBackgr: show }"
-      class="column"
-      position="topright"
-    >
+    <l-control class="column" position="topright">
       <a v-if="!show" @click="show = !show"
         ><img src="../assets/next.png" style="max-width: 25px; float: right;"
       /></a>
@@ -45,15 +46,23 @@
         ><img src="../assets/menu.png" style="max-width: 25px"
       /></a>
 
-      <button v-if="!show" @click="viewId" class="controlButton">
-        Добавить маркер
-      </button>
+
       <button v-if="!show" @click="centerMark" class="controlButton">
         Выравнивание по центру
       </button>
       <button v-if="!show" @click="removeMark" class="controlButton">
         Удалить маркер
       </button>
+      <button v-if="!show" class="controlButton">
+        Показать на карте
+      </button>
+      <input
+        @keyup.enter="splitString(message)"
+        v-if="!show"
+        v-model="message"
+        class="searchInput"
+        placeholder="Search"
+      />
     </l-control>
   </l-map>
 </template>
@@ -91,37 +100,48 @@ export default {
       longitude: null,
       moreInfo: true,
       name: "Name",
-      i: null
+      i: null,
+      message: ""
     };
   },
   methods: {
     mapClick(event) {
-      //console.log(click);
       this.markers.push(event.latlng);
-      this.i = this.markers.length - 1;
-      //console.log(this.markers);
-      this.latitude = event.latlng.lat;
-      this.longitude = event.latlng.lng;
-      console.log(this.latitude, this.longitude);
+      //console.log(this.latitude, this.longitude);
     },
     removeMark() {
-      // remove a marker
-      this.markers.pop();
+      if (this.markers.length > 0) {
+        this.markers.pop();
+      } else {
+        alert("Markers not found");
+      }
     },
     centerMark() {
-      this.center = [this.latitude, this.longitude];
+      //console.log(this.markers[this.markers.length-1]);
+      this.center = [
+        this.markers[this.markers.length - 1].lat,
+        this.markers[this.markers.length - 1].lng
+      ];
     },
     logs() {
       console.log("oncl");
     },
-    information() {
-      console.log("info");
-    },
-    viewId() {
-      console.log(this.i);
+    information(index) {
+      // console.log(index);
+      this.i = this.markers.indexOf(index);
+      this.latitude = this.markers[this.i].lat;
+      this.longitude = this.markers[this.i].lng;
     },
     removeMarkByIndex(index) {
-      this.markers.splice(index, 1);
+      //console.log(index);
+      this.i = this.markers.indexOf(index);
+      this.markers.splice(this.i, 1);
+    },
+    splitString(message) {
+      let razdel = message.split(" ");
+      this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
+      this.markers.push(this.center);
+      console.log(this.markers)
     }
   }
 };
@@ -145,7 +165,6 @@ export default {
   border-radius: 6px;
   border: 1px solid #bcbed0;
   margin: 5px;
-
   font-weight: bold;
   transition: background-color 0.3s ease-in;
 }
@@ -165,5 +184,18 @@ export default {
 .controlButton:active {
   background-color: #251e6b;
   color: #ffff;
+}
+.column > a > img:hover {
+  border: 1px solid black;
+  max-width: 23px !important;
+  cursor: pointer;
+}
+.searchInput {
+  margin: 5px 5px 15px;
+  color: rgb(224, 224, 224);
+  background-color: rgba(10, 10, 10, 0.6);
+}
+input::placeholder {
+  color: rgb(224, 224, 224);
 }
 </style>
