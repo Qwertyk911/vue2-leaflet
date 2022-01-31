@@ -46,7 +46,6 @@
         ><img src="../assets/menu.png" style="max-width: 25px"
       /></a>
 
-
       <button v-if="!show" @click="centerMark" class="controlButton">
         Выравнивание по центру
       </button>
@@ -56,17 +55,28 @@
       <button v-if="!show" class="controlButton">
         Показать на карте
       </button>
-      <input
-        @keyup.enter="splitString(message)"
-        v-if="!show"
-        v-model="message"
-        class="searchInput"
-        placeholder="Search"
-      />
+      <label title="Введите широту и долготу через пробел, затем нажмите Enter">
+        <input
+          @keyup.enter="splitString(message)"
+          v-if="!show"
+          v-model="message"
+          class="searchInput"
+          placeholder="Search"
+      /></label>
+      <label class="labelOtvet"> {{ beforeOtvet }}</label>
+      <label title="Введите город">
+        <input
+          v-if="!show"
+          v-model="postCity"
+          class="searchInput"
+          placeholder="Search"
+      /></label>
+      <button v-if="!show" @click="postAPI(postCity)" class="controlButton">
+        Поиск города
+      </button>
     </l-control>
   </l-map>
 </template>
-
 <script>
 import {
   LMap,
@@ -101,13 +111,18 @@ export default {
       moreInfo: true,
       name: "Name",
       i: null,
-      message: ""
+      message: "",
+      postCity: "",
+      beforeOtvet: "",
+      afterOtvet: ""
     };
   },
+
   methods: {
     mapClick(event) {
       this.markers.push(event.latlng);
-      //console.log(this.latitude, this.longitude);
+      console.log(event.latlng);
+      console.log(this.markers);
     },
     removeMark() {
       if (this.markers.length > 0) {
@@ -141,7 +156,28 @@ export default {
       let razdel = message.split(" ");
       this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
       this.markers.push(this.center);
-      console.log(this.markers)
+      console.log(this.markers);
+    },
+    postAPI(postCity) {
+      this.postCity =
+        "http://192.168.1.85/nominatim/search.php?q=" + this.postCity;
+      //console.log(this.postCity);
+      fetch(this.postCity)
+        .then(response => {
+          return response.json();
+        })
+        .then(data => {
+          this.afterOtvet = data;
+          console.log(this.afterOtvet[0]);
+          this.beforeOtvet = `Обьект находится по координатам: 
+      Широта: ${this.afterOtvet[0].lat}
+      Долгота: ${this.afterOtvet[0].lon}`;
+      this.center = [this.afterOtvet[0].lat, this.afterOtvet[0].lon];
+      this.markers.push([this.afterOtvet[0].lat, this.afterOtvet[0].lon]);
+      this.name = this.afterOtvet[0].display_name;
+
+        });
+      //console.log(this.beforeOtvet);
     }
   }
 };
@@ -197,5 +233,11 @@ export default {
 }
 input::placeholder {
   color: rgb(224, 224, 224);
+}
+.labelOtvet {
+  height: 100px;
+  border: 1px solid black;
+  margin: 5px;
+  max-width: 217.969px;
 }
 </style>
