@@ -4,6 +4,7 @@
     :zoom="13"
     :center="center"
     @click="mapClick"
+    :options="{zoomControl: false}"
   >
     <l-tile-layer :url="url"></l-tile-layer>
     <l-marker
@@ -14,7 +15,7 @@
       :id="i"
     >
       <l-popup>
-        <h1 v-if="moreInfo">{{ name }}</h1>
+        <h4 v-if="moreInfo">{{ name }}</h4>
         <span v-else
           ><p>
             Широта: {{ latitude }}<br />
@@ -29,15 +30,71 @@
             >
           </p></span
         >
-        <button @click="information(marker), (moreInfo = !moreInfo)">
+        <DxButton
+          text="Info"
+          type="success"
+          styling-mode="contained"
+          v-if="!show"
+          @click="information(marker), (moreInfo = !moreInfo)"
+        />
+        <DxButton
+          text="Delete"
+          type="success"
+          styling-mode="contained"
+          v-if="!show"
+          @click="removeMarkByIndex(marker), (moreInfo = true)"
+        />
+        <!-- <button @click="information(marker), (moreInfo = !moreInfo)">
           Info
         </button>
         <button @click="removeMarkByIndex(marker), (moreInfo = true)">
           Delete
-        </button>
+        </button> -->
       </l-popup></l-marker
     >
-
+<l-control class="column" position="topleft">
+        <a v-if="!showSearch" @click="showSearch = !showSearch"
+        ><img src="../assets/search.png" style="max-width: 25px; float: right;"
+      /></a>
+      <a v-else @click="showSearch = !showSearch"
+        ><img src="../assets/left.png" style="max-width: 25px"
+      /></a>
+       <div v-if="showSearch" class="form">
+        <div class="dx-fieldset">
+          <div class="dx-field">
+            <DxButton
+              text="Поиск"
+              type="success"
+              styling-mode="contained"
+              @click="postAPI(postCity)"
+            />
+            <div class="dx-field-value">
+              <DxTextBox
+                v-model="postCity"
+                placeholder="Введите город"
+                :show-clear-button="true"
+              />
+            </div>
+          </div>
+          <div class="dx-field">
+            <DxButton
+              text="Поиск"
+              type="success"
+              styling-mode="contained"
+              @click="splitString(message)"
+              @keyup.enter="splitString(message)"
+            />
+            <div class="dx-field-value">
+              <DxTextBox
+                v-model="message"
+                placeholder="Введите координаты"
+                :show-clear-button="true"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+</l-control>
     <l-control class="column" position="topright">
       <a v-if="!show" @click="show = !show"
         ><img src="../assets/next.png" style="max-width: 25px; float: right;"
@@ -46,35 +103,25 @@
         ><img src="../assets/menu.png" style="max-width: 25px"
       /></a>
 
-      <button v-if="!show" @click="centerMark" class="controlButton">
-        Выравнивание по центру
-      </button>
-      <button v-if="!show" @click="removeMark" class="controlButton">
-        Удалить маркер
-      </button>
-      <button v-if="!show" class="controlButton">
-        Показать на карте
-      </button>
-      <label title="Введите широту и долготу через пробел, затем нажмите Enter">
-        <input
-          @keyup.enter="splitString(message)"
-          v-if="!show"
-          v-model="message"
-          class="searchInput"
-          placeholder="Search"
-      /></label>
-      <label class="labelOtvet"> {{ beforeOtvet }}</label>
-      <label title="Введите город">
-        <input
-          v-if="!show"
-          v-model="postCity"
-          class="searchInput"
-          placeholder="Search"
-      /></label>
-      <button v-if="!show" @click="postAPI(postCity)" class="controlButton">
-        Поиск города
-      </button>
+      <DxButton
+        class="controlButton"
+        text="Выравнивание по центру"
+        type="success"
+        styling-mode="contained"
+        v-if="!show"
+        @click="centerMark"
+      />
+      <DxButton
+        class="controlButton"
+        text="Удалить маркер"
+        type="success"
+        styling-mode="contained"
+        v-if="!show"
+        @click="removeMark"
+      />
+ 
     </l-control>
+    <l-control-zoom position="bottomright"></l-control-zoom>
   </l-map>
 </template>
 <script>
@@ -84,9 +131,11 @@ import {
   LMarker,
   LControl,
   LPolygon,
-  LPopup
+  LPopup,
+  LControlZoom
 } from "vue2-leaflet";
-
+import DxButton from "devextreme-vue/button";
+import DxTextBox from "devextreme-vue/text-box";
 export default {
   name: "VueLeaflet",
   components: {
@@ -94,7 +143,11 @@ export default {
     LTileLayer,
     LMarker,
     LControl,
-    LPopup
+    LPopup,
+    LPolygon,
+    LControlZoom,
+    DxButton,
+    DxTextBox
   },
   data() {
     return {
@@ -106,6 +159,7 @@ export default {
       markers: [],
       popupInfo: [null, null],
       show: false,
+      showSearch: true,
       latitude: null,
       longitude: null,
       moreInfo: true,
@@ -154,28 +208,34 @@ export default {
     },
     splitString(message) {
       let razdel = message.split(" ");
+      if (razdel[0].indexOf(",") >= 0) {
+        razdel[0] = razdel[0].slice(0, -1);
+      }
       this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
       this.markers.push(this.center);
-      console.log(this.markers);
     },
     postAPI(postCity) {
-      this.postCity =
-        "http://192.168.1.85/nominatim/search.php?q=" + this.postCity;
+      postCity = this.postCity;
+      postCity = "http://192.168.1.85/nominatim/search.php?q=" + postCity;
       //console.log(this.postCity);
-      fetch(this.postCity)
+      fetch(postCity)
         .then(response => {
           return response.json();
         })
         .then(data => {
-          this.afterOtvet = data;
-          console.log(this.afterOtvet[0]);
-          this.beforeOtvet = `Обьект находится по координатам: 
+          console.log(data);
+          if (data.length) {
+            this.afterOtvet = data;
+            console.log(this.afterOtvet[0]);
+            this.beforeOtvet = `Обьект находится по координатам: 
       Широта: ${this.afterOtvet[0].lat}
       Долгота: ${this.afterOtvet[0].lon}`;
-      this.center = [this.afterOtvet[0].lat, this.afterOtvet[0].lon];
-      this.markers.push([this.afterOtvet[0].lat, this.afterOtvet[0].lon]);
-      this.name = this.afterOtvet[0].display_name;
-
+            this.center = [this.afterOtvet[0].lat, this.afterOtvet[0].lon];
+            this.markers.push([this.afterOtvet[0].lat, this.afterOtvet[0].lon]);
+            this.name = this.afterOtvet[0].display_name;
+          } else {
+            alert(`Город ${this.postCity} не найден`);
+          }
         });
       //console.log(this.beforeOtvet);
     }
@@ -194,15 +254,7 @@ export default {
   flex-direction: column;
 }
 .controlButton {
-  background-color: #1f1c3b;
-  color: #bcbed0;
-  font-family: Montserrat-Regular;
-  padding: 8px 32px;
-  border-radius: 6px;
-  border: 1px solid #bcbed0;
   margin: 5px;
-  font-weight: bold;
-  transition: background-color 0.3s ease-in;
 }
 
 .kol-flex {
@@ -212,7 +264,7 @@ export default {
   display: -webkit-flex;
   display: flex;
 }
-.controlButton:hover {
+/* .controlButton:hover {
   background-color: #423899;
   color: #ebedff;
   border: 1px solid #e2e5fa;
@@ -220,7 +272,7 @@ export default {
 .controlButton:active {
   background-color: #251e6b;
   color: #ffff;
-}
+} */
 .column > a > img:hover {
   border: 1px solid black;
   max-width: 23px !important;

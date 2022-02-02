@@ -4,6 +4,7 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import 'leaflet/dist/leaflet.css';
+import 'devextreme/dist/css/dx.light.css';
 
 Vue.config.productionTip = false;
 
