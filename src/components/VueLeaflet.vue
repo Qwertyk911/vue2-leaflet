@@ -4,7 +4,7 @@
     :zoom="13"
     :center="center"
     @click="mapClick"
-    :options="{zoomControl: false}"
+    :options="{ zoomControl: false }"
   >
     <l-tile-layer :url="url"></l-tile-layer>
     <l-marker
@@ -34,14 +34,14 @@
           text="Info"
           type="success"
           styling-mode="contained"
-          v-if="!show"
+
           @click="information(marker), (moreInfo = !moreInfo)"
         />
         <DxButton
           text="Delete"
           type="success"
           styling-mode="contained"
-          v-if="!show"
+
           @click="removeMarkByIndex(marker), (moreInfo = true)"
         />
         <!-- <button @click="information(marker), (moreInfo = !moreInfo)">
@@ -52,31 +52,44 @@
         </button> -->
       </l-popup></l-marker
     >
-<l-control class="column" position="topleft">
-        <a v-if="!showSearch" @click="showSearch = !showSearch"
-        ><img src="../assets/search.png" style="max-width: 25px; float: right;"
+    <l-control :style="backgrLeft" class="column" position="topleft">
+      <a
+        v-if="showSearch"
+        @click="(showSearch = !showSearch), switchBackLeft(showSearch)"
+        ><img src="../assets/search.png" style="max-width: 25px"
       /></a>
-      <a v-else @click="showSearch = !showSearch"
-        ><img src="../assets/left.png" style="max-width: 25px"
+      <a v-else @click="(showSearch = !showSearch), switchBackLeft(showSearch)"
+        ><img src="../assets/left.png" style="max-width: 25px; float: left;"
       /></a>
-       <div v-if="showSearch" class="form">
+      <div v-if="!showSearch" class="form">
         <div class="dx-fieldset">
+          <div class="dx-field">
+            <div class="dx-field-label">Искать:</div>
+            <div class="dx-field-value">
+              <DxRadioGroup
+                :items="priorities"
+                :value="priorities[0]"
+                @valueChanged="changeSelection"
+              />
+            </div>
+          </div>
           <div class="dx-field">
             <DxButton
               text="Поиск"
               type="success"
               styling-mode="contained"
-              @click="postAPI(postCity)"
+              @click="postAPI(postCity, searchOf)"
+              @keyup.enter="postAPI(postCity, searchOf)"
             />
             <div class="dx-field-value">
               <DxTextBox
                 v-model="postCity"
-                placeholder="Введите город"
+                :placeholder="searchOf"
                 :show-clear-button="true"
               />
             </div>
           </div>
-          <div class="dx-field">
+          <!-- <div class="dx-field">
             <DxButton
               text="Поиск"
               type="success"
@@ -91,15 +104,15 @@
                 :show-clear-button="true"
               />
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
-</l-control>
-    <l-control class="column" position="topright">
-      <a v-if="!show" @click="show = !show"
+    </l-control>
+    <l-control :style="backgrRight" class="column" position="topright">
+      <a v-if="show" @click="(show = !show), switchBackRignt(show)"
         ><img src="../assets/next.png" style="max-width: 25px; float: right;"
       /></a>
-      <a v-else @click="show = !show"
+      <a v-else @click="(show = !show), switchBackRignt(show)"
         ><img src="../assets/menu.png" style="max-width: 25px"
       /></a>
 
@@ -108,7 +121,7 @@
         text="Выравнивание по центру"
         type="success"
         styling-mode="contained"
-        v-if="!show"
+        v-if="show"
         @click="centerMark"
       />
       <DxButton
@@ -116,10 +129,9 @@
         text="Удалить маркер"
         type="success"
         styling-mode="contained"
-        v-if="!show"
+        v-if="show"
         @click="removeMark"
       />
- 
     </l-control>
     <l-control-zoom position="bottomright"></l-control-zoom>
   </l-map>
@@ -136,6 +148,8 @@ import {
 } from "vue2-leaflet";
 import DxButton from "devextreme-vue/button";
 import DxTextBox from "devextreme-vue/text-box";
+import DxRadioGroup from "devextreme-vue/radio-group";
+
 export default {
   name: "VueLeaflet",
   components: {
@@ -147,10 +161,14 @@ export default {
     LPolygon,
     LControlZoom,
     DxButton,
-    DxTextBox
+    DxTextBox,
+    DxRadioGroup
   },
   data() {
     return {
+      zoom: 13,
+      priorities: ["По названию", "По координатам"],
+      searchOf: "Введите название",
       center: [54.9179, 37.4265],
       map: null,
       tileLayer: null,
@@ -158,7 +176,7 @@ export default {
       //url: "http://192.168.1.85/hot/{z}/{x}/{y}.png",
       markers: [],
       popupInfo: [null, null],
-      show: false,
+      show: true,
       showSearch: true,
       latitude: null,
       longitude: null,
@@ -168,7 +186,9 @@ export default {
       message: "",
       postCity: "",
       beforeOtvet: "",
-      afterOtvet: ""
+      afterOtvet: "",
+      backgrLeft: "",
+      backgrRight: "background: rgba(168, 150, 150, 0.6);"
     };
   },
 
@@ -187,10 +207,15 @@ export default {
     },
     centerMark() {
       //console.log(this.markers[this.markers.length-1]);
-      this.center = [
-        this.markers[this.markers.length - 1].lat,
-        this.markers[this.markers.length - 1].lng
-      ];
+      try {
+        this.center = [
+          this.markers[this.markers.length - 1].lat,
+          this.markers[this.markers.length - 1].lng
+        ];
+        this.zoom=13;
+      } catch (err) {
+        alert("Сначала установите маркер");
+      }
     },
     logs() {
       console.log("oncl");
@@ -207,37 +232,77 @@ export default {
       this.markers.splice(this.i, 1);
     },
     splitString(message) {
-      let razdel = message.split(" ");
-      if (razdel[0].indexOf(",") >= 0) {
-        razdel[0] = razdel[0].slice(0, -1);
+      // let razdel = message.split(" ");
+      // if (razdel[0].indexOf(",") >= 0) {
+      //   razdel[0] = razdel[0].slice(0, -1);
+      // }
+      // this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
+      // this.markers.push(this.center);
+      try {
+        alert("Начало блока try"); // (1) <--
+
+        lalala; // ошибка, переменная не определена!
+
+        alert("Конец блока try (никогда не выполнится)"); // (2)
+      } catch (err) {
+        alert(`Возникла ошибка!`); // (3) <--
       }
-      this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
-      this.markers.push(this.center);
     },
-    postAPI(postCity) {
-      postCity = this.postCity;
-      postCity = "http://192.168.1.85/nominatim/search.php?q=" + postCity;
-      //console.log(this.postCity);
-      fetch(postCity)
-        .then(response => {
-          return response.json();
-        })
-        .then(data => {
-          console.log(data);
-          if (data.length) {
-            this.afterOtvet = data;
-            console.log(this.afterOtvet[0]);
-            this.beforeOtvet = `Обьект находится по координатам: 
-      Широта: ${this.afterOtvet[0].lat}
-      Долгота: ${this.afterOtvet[0].lon}`;
-            this.center = [this.afterOtvet[0].lat, this.afterOtvet[0].lon];
-            this.markers.push([this.afterOtvet[0].lat, this.afterOtvet[0].lon]);
-            this.name = this.afterOtvet[0].display_name;
-          } else {
-            alert(`Город ${this.postCity} не найден`);
-          }
-        });
-      //console.log(this.beforeOtvet);
+
+    postAPI(postCity, searchOf) {
+      if (searchOf === "Введите координаты") {
+        let razdel = postCity.split(" ");
+        if (razdel[0].indexOf(",") >= 0) {
+          razdel[0] = razdel[0].slice(0, -1);
+        }
+        this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
+        this.markers.push(this.center);
+      } else {
+        postCity = this.postCity;
+        postCity = "http://192.168.1.85/nominatim/search.php?q=" + postCity;
+        fetch(postCity)
+          .then(response => {
+            return response.json();
+          })
+          .then(data => {
+            console.log(data);
+            if (data.length) {
+              this.afterOtvet = data;
+              //console.log(this.afterOtvet[0]);
+              //this.beforeOtvet = `Обьект находится по координатам:
+              // Широта: ${this.afterOtvet[0].lat}
+              // Долгота: ${this.afterOtvet[0].lon}`;
+              this.center = [this.afterOtvet[0].lat, this.afterOtvet[0].lon];
+              this.markers.push([
+                this.afterOtvet[0].lat,
+                this.afterOtvet[0].lon
+              ]);
+              this.name = this.afterOtvet[0].display_name;
+            } else {
+              this.postCity.length == 0 ? alert(`Введите название`):
+              alert(`Город ${this.postCity} не найден`);
+            }
+          });
+        //console.log(this.beforeOtvet);
+      }
+    },
+    switchBackLeft(showSearch) {
+      !showSearch
+        ? (this.backgrLeft = "background: rgba(168, 150, 150, 0.6);")
+        : (this.backgrLeft = "");
+    },
+    switchBackRignt(show) {
+      show
+        ? (this.backgrRight = "background: rgba(168, 150, 150, 0.6);")
+        : (this.backgrRight = "");
+    },
+    changeSelection(e) {
+      console.log(e);
+      if (e.value === "По координатам") {
+        this.searchOf = "Введите координаты";
+      } else {
+        this.searchOf = "Введите название";
+      }
     }
   }
 };
@@ -247,7 +312,7 @@ export default {
 .column {
   display: flex;
   flex-direction: column;
-  background: rgba(168, 150, 150, 0.6);
+  /* background: rgba(168, 150, 150, 0.6); */
 }
 .columnNoBackgr {
   display: flex;
