@@ -12,7 +12,6 @@
       v-for="(marker, key) in markers"
       :key="key"
       :lat-lng="marker"
-      :id="i"
     >
       <l-popup>
         <h4 v-if="moreInfo">{{ name }}</h4>
@@ -34,24 +33,15 @@
           text="Info"
           type="success"
           styling-mode="contained"
-
           @click="information(marker), (moreInfo = !moreInfo)"
         />
         <DxButton
           text="Delete"
           type="success"
           styling-mode="contained"
-
           @click="removeMarkByIndex(marker), (moreInfo = true)"
-        />
-        <!-- <button @click="information(marker), (moreInfo = !moreInfo)">
-          Info
-        </button>
-        <button @click="removeMarkByIndex(marker), (moreInfo = true)">
-          Delete
-        </button> -->
-      </l-popup></l-marker
-    >
+        /> </l-popup
+    ></l-marker>
     <l-control :style="backgrLeft" class="column" position="topleft">
       <a
         v-if="showSearch"
@@ -89,22 +79,6 @@
               />
             </div>
           </div>
-          <!-- <div class="dx-field">
-            <DxButton
-              text="Поиск"
-              type="success"
-              styling-mode="contained"
-              @click="splitString(message)"
-              @keyup.enter="splitString(message)"
-            />
-            <div class="dx-field-value">
-              <DxTextBox
-                v-model="message"
-                placeholder="Введите координаты"
-                :show-clear-button="true"
-              />
-            </div>
-          </div> -->
         </div>
       </div>
     </l-control>
@@ -175,6 +149,9 @@ export default {
       url: "http://{s}.tile.osm.org/{z}/{x}/{y}.png",
       //url: "http://192.168.1.85/hot/{z}/{x}/{y}.png",
       markers: [],
+      bmark: {
+        latLng: []
+      },
       popupInfo: [null, null],
       show: true,
       showSearch: true,
@@ -212,7 +189,7 @@ export default {
           this.markers[this.markers.length - 1].lat,
           this.markers[this.markers.length - 1].lng
         ];
-        this.zoom=13;
+        this.zoom = 13;
       } catch (err) {
         alert("Сначала установите маркер");
       }
@@ -224,66 +201,89 @@ export default {
       // console.log(index);
       this.i = this.markers.indexOf(index);
       this.latitude = this.markers[this.i].lat;
-      this.longitude = this.markers[this.i].lng;
+      this.longitude = this.markers[this.i].lon;
+      if (!this.longitude) {
+        this.longitude = this.markers[this.i].lng;
+      }
+      this.name = this.markers[this.i].display_name;
+      console.log(this.markers[this.i].name);
     },
     removeMarkByIndex(index) {
       //console.log(index);
       this.i = this.markers.indexOf(index);
       this.markers.splice(this.i, 1);
     },
-    splitString(message) {
-      // let razdel = message.split(" ");
-      // if (razdel[0].indexOf(",") >= 0) {
-      //   razdel[0] = razdel[0].slice(0, -1);
-      // }
-      // this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
-      // this.markers.push(this.center);
-      try {
-        alert("Начало блока try"); // (1) <--
-
-        lalala; // ошибка, переменная не определена!
-
-        alert("Конец блока try (никогда не выполнится)"); // (2)
-      } catch (err) {
-        alert(`Возникла ошибка!`); // (3) <--
-      }
-    },
 
     postAPI(postCity, searchOf) {
       if (searchOf === "Введите координаты") {
-        let razdel = postCity.split(" ");
-        if (razdel[0].indexOf(",") >= 0) {
-          razdel[0] = razdel[0].slice(0, -1);
+        if (/[a-zA-ZА-Яа-я]/.test(postCity)) {
+          alert(
+            "Неверный формат данных \nВведите широту и долготу через запятую или пробел"
+          );
+        } else {
+          let razdel = postCity.split(" ");
+          if (razdel[0].indexOf(",") >= 0) {
+            razdel[0] = razdel[0].slice(0, -1);
+          }
+          // For test------------------------------------------------------------------------
+
+          // //console.log(razdel);
+          // this.center = [razdel[0], razdel[1]];
+          // LMarker.latLng = [razdel[0], razdel[1]];
+          // console.log(LMarker)
+          // //this.bmark.lng = razdel[1];
+          // this.markers.push(LMarker.latLng);
+          // console.log(this.markers)
+
+          // For Nominatim----------------------------------------------------------------------
+          //postCity = this.postCity;
+          postCity = `http://192.168.1.85/nominatim/reverse.php?lat=${razdel[0]}&lon=${razdel[1]}`;
+          fetch(postCity)
+            .then(response => {
+              return response.text();
+            })
+            .then(data => {
+              if (data.length) {
+                console.log(data);
+                let start = data.indexOf("<result ");
+                let finish = data.indexOf("</result>");
+                console.log(start);
+                data.slice(start, finish - start)
+                console.log(finish);
+                // this.center = [data[0].lat, data[0].lon];
+                // LMarker.latLng = [data[0].lat, data[0].lon];
+                // LMarker.display_name = data[0].display_name;
+                // this.markers.push(data[0]);
+              } else {
+                this.postCity.length == 0
+                  ? alert(`Введите название`)
+                  : alert(`Город ${this.postCity} не найден`);
+              }
+            });
         }
-        this.center = [parseInt(razdel[0]), parseInt(razdel[1])];
-        this.markers.push(this.center);
       } else {
-        postCity = this.postCity;
-        postCity = "http://192.168.1.85/nominatim/search.php?q=" + postCity;
-        fetch(postCity)
-          .then(response => {
-            return response.json();
-          })
-          .then(data => {
-            console.log(data);
-            if (data.length) {
-              this.afterOtvet = data;
-              //console.log(this.afterOtvet[0]);
-              //this.beforeOtvet = `Обьект находится по координатам:
-              // Широта: ${this.afterOtvet[0].lat}
-              // Долгота: ${this.afterOtvet[0].lon}`;
-              this.center = [this.afterOtvet[0].lat, this.afterOtvet[0].lon];
-              this.markers.push([
-                this.afterOtvet[0].lat,
-                this.afterOtvet[0].lon
-              ]);
-              this.name = this.afterOtvet[0].display_name;
-            } else {
-              this.postCity.length == 0 ? alert(`Введите название`):
-              alert(`Город ${this.postCity} не найден`);
-            }
-          });
-        //console.log(this.beforeOtvet);
+        if (/[a-zA-ZА-Яа-я]/.test(postCity)) {
+          // postCity = this.postCity;
+          postCity = "http://192.168.1.85/nominatim/search.php?q=" + postCity;
+          fetch(postCity)
+            .then(response => {
+              return response.json();
+            })
+            .then(data => {
+              if (data.length) {
+                this.center = [data[0].lat, data[0].lon];
+                LMarker.latLng = [data[0].lat, data[0].lon];
+                LMarker.display_name = data[0].display_name;
+                this.markers.push(data[0]);
+              } else {
+                this.postCity.length == 0
+                  ? alert(`Введите название`)
+                  : alert(`Город ${this.postCity} не найден`);
+              }
+            });
+        } else {
+          alert("Неверно введено название");
+        }
       }
     },
     switchBackLeft(showSearch) {
