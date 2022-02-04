@@ -22,8 +22,8 @@ For a detailed explanation on how things work, check out the [guide](http://vuej
 
 
 ## TODO:
-1. Нужно переделать все кнопки и формы на [devextreme](https://js.devexpress.com/Documentation/Guide/Vue_Components/Add_DevExtreme_to_a_Vue_Application/). [Demo кнопки](https://js.devexpress.com/Demos/WidgetsGallery/Demo/Button/PredefinedTypes/Vue/Light/). [Demo input](https://js.devexpress.com/Demos/WidgetsGallery/Demo/TextBox/Overview/Vue/Light/).
-
-2. Поиски нужно перенести в другое место(в левый верхний угл). [Zoom](https://vue2-leaflet.netlify.app/components/LControlZoom.html#demo) в правый нижний. Остальные кнопки оставить там же (может некоторые поменять на иконки).
-
-3. В форме поиска по названию убрать подставление ссылки на север. Добавить к поиску по координатам возможность перечислять их через запятую (54.938894, 37.404405)
+- Начинай разделять все по компонентам. Потому что приложение усложняется.
+- Ну сам знаешь выпадающий список в поиске) Его можно заменить на [DxAutocomplete](https://js.devexpress.com/Demos/WidgetsGallery/Demo/Autocomplete/Overview/Vue/Light/). Будет готовый поиск
+- Левое меню с поиском нужно заменить на [DxDrawer](https://js.devexpress.com/Demos/WidgetsGallery/Demo/Drawer/LeftOrRightPosition/Vue/Light/). Там будет: поиск и вся основная информация о выбранном маркере. Так же там будут действия с ним, например удалить и пусть там пока что будет выравнивание.
+- Правое меню убрать
+- Кнопочку поиска можно заменить на кнопку с [лупой](https://js.devexpress.com/Documentation/Guide/Themes_and_Styles/Icons/#Built-In_Icon_Library)

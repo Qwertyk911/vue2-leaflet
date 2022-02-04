@@ -1,6 +1,6 @@
 <template>
   <l-map
-    style="width: 100%; height: 600px;"
+    style="width: 100%; height: 100vh;"
     :zoom="13"
     :center="center"
     @click="mapClick"
@@ -197,7 +197,7 @@ export default {
   methods: {
     mapClick(event) {
       //this.markers.push(event.latlng);
-
+  
       // Добавление меток по клику через номинатим-------------------------------------------------------------
       let koord = "Введите координаты";
       let zapros = `${event.latlng.lat} ${event.latlng.lng}`;
