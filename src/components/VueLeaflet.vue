@@ -20,15 +20,15 @@
             Широта: {{ latitude }}<br />
             Долгота: {{ longitude }}
           </p>
-          <hr />
+          <!-- <hr />
           <p>
             <b>Подробноая информация:</b>
             <em
               >Lorem ipsum dolor sit amet consectetur adipisicing elit. Veniam,
               quidem.</em
             >
-          </p></span
-        >
+          </p> -->
+        </span>
         <DxButton
           text="Info"
           type="success"
@@ -69,14 +69,28 @@
               type="success"
               styling-mode="contained"
               @click="postAPI(postCity, searchOf)"
-              @keyup.enter="postAPI(postCity, searchOf)"
             />
-            <div class="dx-field-value">
+            <div
+              class="dx-field-value"
+              @keyup.enter="postAPI(postCity, searchOf)"
+            >
               <DxTextBox
                 v-model="postCity"
                 :placeholder="searchOf"
                 :show-clear-button="true"
               />
+
+              <!-- Выпадающий список пока не реализован-->
+              <select v-model="list">
+                <option
+                  v-for="listDat in listData"
+                  :value="listDat.display_name"
+                  :key="listDat.id"
+                  >{{ listDat.display_name }}</option
+                >
+              </select>
+              <!-- Конец выпадающего списка -->
+
             </div>
           </div>
         </div>
@@ -143,15 +157,19 @@ export default {
       zoom: 13,
       priorities: ["По названию", "По координатам"],
       searchOf: "Введите название",
-      center: [54.9179, 37.4265],
+      center: [45.17131249, 33.2975006],
       map: null,
       tileLayer: null,
       url: "http://{s}.tile.osm.org/{z}/{x}/{y}.png",
       //url: "http://192.168.1.85/hot/{z}/{x}/{y}.png",
       markers: [],
-      bmark: {
-        latLng: []
-      },
+      bmark: [
+        {
+          lat: null,
+          lng: null,
+          display_name: ""
+        }
+      ],
       popupInfo: [null, null],
       show: true,
       showSearch: true,
@@ -165,16 +183,27 @@ export default {
       beforeOtvet: "",
       afterOtvet: "",
       backgrLeft: "",
-      backgrRight: "background: rgba(168, 150, 150, 0.6);"
+      backgrRight: "background: rgba(168, 150, 150, 0.6);",
+      listData: [
+        {
+          id: null,
+          display_name: ""
+        }
+      ],
+      list: null
     };
   },
 
   methods: {
     mapClick(event) {
-      this.markers.push(event.latlng);
-      console.log(event.latlng);
-      console.log(this.markers);
+      //this.markers.push(event.latlng);
+
+      // Добавление меток по клику через номинатим-------------------------------------------------------------
+      let koord = "Введите координаты";
+      let zapros = `${event.latlng.lat} ${event.latlng.lng}`;
+      this.postAPI(zapros, koord);
     },
+    // Удаление  последней добавленной метки
     removeMark() {
       if (this.markers.length > 0) {
         this.markers.pop();
@@ -182,8 +211,8 @@ export default {
         alert("Markers not found");
       }
     },
+    // Выровнять карту по центру
     centerMark() {
-      //console.log(this.markers[this.markers.length-1]);
       try {
         this.center = [
           this.markers[this.markers.length - 1].lat,
@@ -197,6 +226,8 @@ export default {
     logs() {
       console.log("oncl");
     },
+
+    // Вывод информации о метке----------------------------------------------------
     information(index) {
       // console.log(index);
       this.i = this.markers.indexOf(index);
@@ -206,16 +237,18 @@ export default {
         this.longitude = this.markers[this.i].lng;
       }
       this.name = this.markers[this.i].display_name;
-      console.log(this.markers[this.i].name);
     },
+
+    // Удаление метки по клику на нее
     removeMarkByIndex(index) {
-      //console.log(index);
       this.i = this.markers.indexOf(index);
       this.markers.splice(this.i, 1);
     },
-
+    // Формирование запроса в номинатим/парсим ответ/добавляем метку на карту
     postAPI(postCity, searchOf) {
       if (searchOf === "Введите координаты") {
+
+        // Начало блока для запроса по координатам или клика по карте---------------------------------------------------
         if (/[a-zA-ZА-Яа-я]/.test(postCity)) {
           alert(
             "Неверный формат данных \nВведите широту и долготу через запятую или пробел"
@@ -225,7 +258,7 @@ export default {
           if (razdel[0].indexOf(",") >= 0) {
             razdel[0] = razdel[0].slice(0, -1);
           }
-          // For test------------------------------------------------------------------------
+          // For test-----------------------------------------
 
           // //console.log(razdel);
           // this.center = [razdel[0], razdel[1]];
@@ -235,8 +268,8 @@ export default {
           // this.markers.push(LMarker.latLng);
           // console.log(this.markers)
 
-          // For Nominatim----------------------------------------------------------------------
-          //postCity = this.postCity;
+          // For Nominatim------------------------------------
+
           postCity = `http://192.168.1.85/nominatim/reverse.php?lat=${razdel[0]}&lon=${razdel[1]}`;
           fetch(postCity)
             .then(response => {
@@ -244,16 +277,37 @@ export default {
             })
             .then(data => {
               if (data.length) {
-                console.log(data);
                 let start = data.indexOf("<result ");
                 let finish = data.indexOf("</result>");
-                console.log(start);
-                data.slice(start, finish - start)
-                console.log(finish);
-                // this.center = [data[0].lat, data[0].lon];
-                // LMarker.latLng = [data[0].lat, data[0].lon];
-                // LMarker.display_name = data[0].display_name;
-                // this.markers.push(data[0]);
+                let diff = data.slice(start + 8, finish);
+
+                this.center = [razdel[0], razdel[1]];
+                this.bmark.lat = razdel[0];
+                this.bmark.lng = razdel[1];
+
+                if (data.indexOf("</error") >= 0) {
+                  this.bmark.display_name =
+                    "Информация о данной метке остутствует";
+                }
+
+                // Костыль для Крыма -----------------------------------------------
+                else if (data.indexOf("Республика Крым") >= 0) {
+                  this.bmark.display_name = diff
+                    .slice(diff.indexOf(">") + 1, diff.length)
+                    .replace("Украина", "Россия")
+                    .split("&quot;")
+                    .join('"');
+                }
+                //----------------------------------------------------------------
+
+
+                else {
+                  this.bmark.display_name = diff
+                    .slice(diff.indexOf(">") + 1, diff.length)
+                    .split("&quot;")
+                    .join('"');
+                }
+                this.markers.push(Object.assign({}, this.bmark));
               } else {
                 this.postCity.length == 0
                   ? alert(`Введите название`)
@@ -261,9 +315,10 @@ export default {
               }
             });
         }
+        // Конец блока для запроса по координатам или клика по карте---------------------------------------------------
       } else {
+        // Начало блока для запроса по названию---------------------------------------------------
         if (/[a-zA-ZА-Яа-я]/.test(postCity)) {
-          // postCity = this.postCity;
           postCity = "http://192.168.1.85/nominatim/search.php?q=" + postCity;
           fetch(postCity)
             .then(response => {
@@ -271,9 +326,8 @@ export default {
             })
             .then(data => {
               if (data.length) {
+                this.listData = data;
                 this.center = [data[0].lat, data[0].lon];
-                LMarker.latLng = [data[0].lat, data[0].lon];
-                LMarker.display_name = data[0].display_name;
                 this.markers.push(data[0]);
               } else {
                 this.postCity.length == 0
@@ -284,6 +338,7 @@ export default {
         } else {
           alert("Неверно введено название");
         }
+        // Конец блока для запроса по названию---------------------------------------------------
       }
     },
     switchBackLeft(showSearch) {
@@ -312,7 +367,6 @@ export default {
 .column {
   display: flex;
   flex-direction: column;
-  /* background: rgba(168, 150, 150, 0.6); */
 }
 .columnNoBackgr {
   display: flex;
@@ -329,15 +383,6 @@ export default {
   display: -webkit-flex;
   display: flex;
 }
-/* .controlButton:hover {
-  background-color: #423899;
-  color: #ebedff;
-  border: 1px solid #e2e5fa;
-}
-.controlButton:active {
-  background-color: #251e6b;
-  color: #ffff;
-} */
 .column > a > img:hover {
   border: 1px solid black;
   max-width: 23px !important;
